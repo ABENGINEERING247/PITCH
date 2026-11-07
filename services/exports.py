@@ -2,24 +2,65 @@ import io
 import csv
 import pandas as pd
 from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openpyxl
 
+def get_alignment_enum(align_str):
+    if align_str == "Right":
+        return WD_ALIGN_PARAGRAPH.RIGHT
+    elif align_str == "Center":
+        return WD_ALIGN_PARAGRAPH.CENTER
+    return WD_ALIGN_PARAGRAPH.LEFT
+
 def export_docx(paper, include_answers=False):
     doc = Document()
-    doc.add_heading(paper.get("institution", "Examination Centre"), level=1)
-    doc.add_paragraph(f"Subject: {paper.get('subject')} | Type: {paper.get('exam_type')} | Total Marks: {paper.get('total_marks')}")
+    
+    # Layout and Branding Configurations
+    branding = paper.get("branding", {})
+    logo_bytes = branding.get("logo_bytes")
+    align_str = branding.get("alignment", "Center")
+    docx_align = get_alignment_enum(align_str)
+    
+    # Add Logo if present
+    if logo_bytes:
+        p_logo = doc.add_paragraph()
+        p_logo.alignment = docx_align
+        try:
+            p_logo.add_run().add_picture(io.BytesIO(logo_bytes), width=docx.shared.Inches(1.2))
+        except Exception:
+            pass
+
+    # Header / Institution Title
+    p_inst = doc.add_paragraph()
+    p_inst.alignment = docx_align
+    p_inst.add_run(paper.get("institution", "Examination Centre")).bold = True
+    
+    p_dept = doc.add_paragraph()
+    p_dept.alignment = docx_align
+    p_dept.add_run(paper.get("department", "Department"))
+    
+    doc.add_heading(f"Subject: {paper.get('subject')} ({paper.get('exam_type', 'Exam')})", level=2)
+    doc.add_paragraph(f"Time Allowed: {paper.get('duration')} | Total Marks: {paper.get('total_marks')}")
     doc.add_paragraph(f"Instructions: {paper.get('instructions')}")
-    doc.add_paragraph("-" * 40)
+    doc.add_paragraph("-" * 50)
     
     for idx, q in enumerate(paper.get("questions", []), 1):
-        doc.add_paragraph(f"Q{idx}: {q.get('question')} ({q.get('marks')} Marks)")
+        doc.add_paragraph(f"Q{idx}: {q.get('question')} [{q.get('marks')} Marks]")
         if q.get("options"):
             for opt in q["options"]:
                 doc.add_paragraph(f"   {opt}")
         if include_answers:
-            doc.add_paragraph(f"   [Answer]: {q.get('answer')}")
+            doc.add_paragraph(f"   [Model Answer]: {q.get('answer')}")
+            
+    # Bottom Footer
+    footer_text = paper.get("footer_text", "PITCH | Confidential Examination Paper")
+    section = doc.sections[0]
+    footer = section.footer
+    f_para = footer.paragraphs[0]
+    f_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    f_para.text = footer_text
     
     bio = io.BytesIO()
     doc.save(bio)
@@ -30,23 +71,54 @@ def export_pdf(paper, include_answers=False):
     bio = io.BytesIO()
     c = canvas.Canvas(bio, pagesize=letter)
     width, height = letter
-    y = height - 50
+    y = height - 40
     
-    c.drawString(50, y, f"Institution: {paper.get('institution')}")
+    branding = paper.get("branding", {})
+    align_str = branding.get("alignment", "Center")
+    
+    # Header positioning based on alignment
+    c.setFont("Helvetica-Bold", 14)
+    inst_text = paper.get("institution", "Examination Centre")
+    if align_str == "Right":
+        c.drawRightString(width - 50, y, inst_text)
+    elif align_str == "Center":
+        c.drawCentredString(width / 2.0, y, inst_text)
+    else:
+        c.drawString(50, y, inst_text)
+        
     y -= 20
-    c.drawString(50, y, f"Subject: {paper.get('subject')} | Marks: {paper.get('total_marks')}")
+    c.setFont("Helvetica", 10)
+    sub_text = f"Subject: {paper.get('subject')} | Total Marks: {paper.get('total_marks')}"
+    if align_str == "Right":
+        c.drawRightString(width - 50, y, sub_text)
+    elif align_str == "Center":
+        c.drawCentredString(width / 2.0, y, sub_text)
+    else:
+        c.drawString(50, y, sub_text)
+        
     y -= 30
+    c.line(50, y, width - 50, y)
+    y -= 25
     
     for idx, q in enumerate(paper.get("questions", []), 1):
-        if y < 100:
+        if y < 80:
             c.showPage()
             y = height - 50
-        c.drawString(50, y, f"Q{idx}: {q.get('question')[:80]} ({q.get('marks')}M)")
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, y, f"Q{idx}: ({q.get('marks')} Marks)")
+        y -= 15
+        c.setFont("Helvetica", 10)
+        c.drawString(70, y, q.get('question')[:90])
         y -= 20
         if include_answers:
-            c.drawString(70, y, f"Ans: {str(q.get('answer'))[:80]}")
+            c.drawString(90, y, f"Ans: {str(q.get('answer'))[:85]}")
             y -= 20
             
+    # Bottom Footer
+    c.setFont("Helvetica-Oblique", 8)
+    footer_text = paper.get("footer_text", "PITCH | Confidential Examination Paper")
+    c.drawCentredString(width / 2.0, 30, footer_text)
+    
     c.save()
     bio.seek(0)
     return bio.getvalue()
