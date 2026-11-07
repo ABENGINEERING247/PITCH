@@ -20,24 +20,21 @@ div.stButton>button[kind="primary"] {background:#087f8c;border-color:#087f8c;}
 </style>
 """, unsafe_allow_html=True)
 
-# Native Streamlit Modal Dialog
+# Native Streamlit Modal Dialog for Welcome / Features
 @st.dialog("PITCH – Professional Intelligent Testing & Content Hub", width="large")
 def show_welcome_dialog():
     st.markdown("""
     <p style="font-size: 1.05rem; color: #52666a; line-height: 1.5; margin-bottom: 15px;">
-    AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.
+    AI-assisted examination paper generation, offline document parser (PDF, DOCX, XLSX, CSV), Bloom's Taxonomy question formatting, and result exports.
     </p>
     """, unsafe_allow_html=True)
     
-    st.markdown("### Core Features")
+    st.markdown("### Core Features & Updates")
     st.markdown("""
-    * **Generate Questions:** MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.
-    * **Configuration:** Section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.
-    * **Customization:** Institution, department, exam header, instructions and footer.
-    * **AI Assistant:** Chatbot for examination and teaching content.
-    * **File Support:** Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).
-    * **Database & Storage:** SQLite question bank, saved papers and student results.
-    * **Exports:** Examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.
+    * **Offline Paper Generator:** Extract text from PDF, DOCX, XLSX, and CSV files offline.
+    * **Bloom's Taxonomy Standards:** Short and long questions automatically incorporate cognitive verbs (Define, Explain, Analyze, Evaluate, etc.).
+    * **Header & Logo Alignment:** Choose Left, Center, or Right alignments for institutional headers and logos, with configurable bottom footers.
+    * **Exports:** Download papers and answer keys to DOCX, PDF, XLSX, and CSV.
     """)
     
     col1, col2 = st.columns([5, 1])
@@ -46,7 +43,6 @@ def show_welcome_dialog():
             st.session_state.popup_dismissed = True
             st.rerun()
 
-# Initialize popup state so it shows on first load
 if "popup_dismissed" not in st.session_state:
     st.session_state.popup_dismissed = False
 
@@ -80,7 +76,7 @@ if page == "Dashboard":
     st.subheader("Recent examination papers")
     if papers:
         st.dataframe([{"ID":p["id"],"Title":p["title"],"Subject":p["subject"],"Date":p["created_at"]} for p in papers[:10]], use_container_width=True)
-    else: st.info("No papers yet. Start with AI Exam Generator or Offline Exam Generator.")
+    else: st.info("No papers yet. Start with Offline Exam Generator.")
 
 elif page == "AI Exam Generator":
     header("AI Examination Paper Generator", "Build a complete, customizable paper with section rules, marks and internal choices.")
@@ -98,71 +94,51 @@ elif page == "AI Exam Generator":
         exam_date = h.text_input("Examination date")
         duration = i.text_input("Time allowed", "2 Hours")
         total_marks = st.number_input("Total paper marks", min_value=1, max_value=1000, value=100)
-        instructions = st.text_area("General instructions", "Attempt the required number of questions. Write answers clearly.")
-        header_text = st.text_area("Custom header (optional)")
-        footer_text = st.text_input("Footer", "PITCH | Confidential Examination Paper")
+        instructions = st.text_area("General instructions", "Attempt the required number of questions.")
         
-        st.markdown("### Section configuration")
-        section_count = st.number_input("Number of sections", 1, 8, 3)
-        sections=[]
-        for idx in range(int(section_count)):
-            st.markdown(f"**Section {chr(65+idx)}**")
-            x1,x2,x3,x4 = st.columns(4)
-            typ=x1.selectbox("Question type", ["MCQ","Short","Long","Fill in the Blanks","True/False","Descriptive","Numerical","Practical"], key=f"typ{idx}")
-            count=x2.number_input("Questions generated",1,100,5,key=f"cnt{idx}")
-            marks=x3.number_input("Marks each",0.5,1000.0,2.0,key=f"mrk{idx}",step=0.5)
-            attempt=x4.number_input("Attempt",1,int(count),int(count),key=f"att{idx}")
-            sections.append({"name":f"Section {chr(65+idx)}","type":typ,"count":int(count),"marks":float(marks),"attempt":int(attempt)})
-            
-        topic = st.text_area("Topics / syllabus / learning outcomes")
-        difficulty = st.select_slider("Difficulty", options=["Very Easy","Easy","Moderate","Difficult","Advanced"], value="Moderate")
-        bloom = st.multiselect("Bloom's taxonomy",["Remember","Understand","Apply","Analyze","Evaluate","Create"],default=["Remember","Understand","Apply"])
-        language = st.selectbox("Language",["English","Urdu","Bilingual"])
-        mcq_options = st.selectbox("MCQ options per question",[2,3,4,5,6],index=2)
-        include_key = st.checkbox("Generate answer key and marking scheme",True)
-        reference_text = st.text_area("Reference content (optional)")
         submitted=st.form_submit_button("Generate examination paper with AI",type="primary",use_container_width=True)
-        
     if submitted:
         if not subject.strip(): st.error("Enter a subject name.")
         else:
             with st.spinner("Generating questions..."):
                 try:
-                    qs=generate_questions(subject, topic, sections, difficulty, bloom, language, mcq_options, reference_text)
-                    paper={"institution":institution,"department":department,"exam_type":exam_type,"subject":subject,"code":code,"class_name":class_name,"academic_year":academic_year,"exam_date":exam_date,"duration":duration,"total_marks":float(total_marks),"instructions":instructions,"header_text":header_text,"footer_text":footer_text,"sections":sections,"questions":qs,"include_key":include_key}
-                    issues=validate_paper(paper)
+                    sections=[{"name":"Section A","type":"MCQ","count":5,"marks":2.0,"attempt":5}]
+                    qs=generate_questions(subject, "General", sections, "Moderate", ["Remember","Understand"], "English", 4, "")
+                    paper={"institution":institution,"department":department,"exam_type":exam_type,"subject":subject,"total_marks":float(total_marks),"instructions":instructions,"sections":sections,"questions":qs,"include_key":True}
                     pid=save_paper(paper)
                     st.session_state["current_paper"]=paper
-                    st.session_state["current_paper_id"]=pid
-                    st.success(f"Generated {len(qs)} questions. Saved paper #{pid}.")
-                    for issue in issues: st.warning(issue)
+                    st.success(f"Generated paper #{pid}.")
                 except Exception as ex: st.error(f"Generation failed: {ex}")
 
 elif page == "Offline Exam Generator":
-    header("Offline Paper Generator (PDF, DOCX, XLSX, CSV)", "Generate examination papers locally using uploaded documents without requiring an internet connection.")
+    header("Offline Paper Generator (PDF, DOCX, XLSX, CSV)", "Generate examination papers locally using uploaded documents with Bloom's Taxonomy constraints and layout options.")
     
     with st.form("offline_form"):
         uploaded_doc = st.file_uploader("Upload Source File (PDF, DOCX, XLSX, CSV)", type=["pdf", "docx", "xlsx", "csv"])
         
+        st.markdown("### Institution & Header Layout")
         a,b,c = st.columns(3)
         institution = a.text_input("Institution / University", "PITCH Offline Centre", key="off_inst")
         department = b.text_input("Department", "Department", key="off_dept")
         subject = c.text_input("Subject name", "Document Assessment", key="off_subj")
         
-        d,e,f = st.columns(3)
-        exam_type = d.selectbox("Examination type", ["Midterm","Final","Quiz","Class Test","Assignment"], key="off_type")
-        duration = e.text_input("Time allowed", "1.5 Hours", key="off_dur")
-        total_marks = f.number_input("Total paper marks", min_value=1, max_value=1000, value=50, key="off_tot")
+        logo_file = st.file_uploader("Institution Logo (PNG, JPG)", type=["png", "jpg", "jpeg"], key="off_logo")
         
-        instructions = st.text_area("General instructions", "Answer all questions based on the uploaded reference document.", key="off_instru")
+        l1, l2, l3 = st.columns(3)
+        header_align = l1.selectbox("Header & Logo Alignment", ["Center", "Left", "Right"], key="off_align")
+        footer_text = l2.text_input("Bottom Footer Text", "PITCH | Confidential Examination Paper", key="off_footer")
+        duration = l3.text_input("Time allowed", "1.5 Hours", key="off_dur")
         
-        st.markdown("### Section configuration")
+        total_marks = st.number_input("Total paper marks", min_value=1, max_value=1000, value=50, key="off_tot")
+        instructions = st.text_area("General instructions", "Answer all questions. Short questions follow Bloom's cognitive standards; long questions require analytical evaluation.", key="off_instru")
+        
+        st.markdown("### Section configuration (Bloom's Taxonomy Applied)")
         section_count = st.number_input("Number of sections", 1, 5, 2, key="off_sec_cnt")
         sections=[]
         for idx in range(int(section_count)):
             st.markdown(f"**Section {chr(65+idx)}**")
             x1,x2,x3,x4 = st.columns(4)
-            typ = x1.selectbox("Question type", ["MCQ","Short","Descriptive","True/False"], key=f"off_typ{idx}")
+            typ = x1.selectbox("Question type", ["MCQ","Short","Long","True/False"], key=f"off_typ{idx}")
             count = x2.number_input("Questions generated", 1, 50, 5, key=f"off_cnt{idx}")
             marks = x3.number_input("Marks each", 0.5, 100.0, 2.0, key=f"off_mrk{idx}", step=0.5)
             attempt = x4.number_input("Attempt", 1, int(count), int(count), key=f"off_att{idx}")
@@ -176,24 +152,27 @@ elif page == "Offline Exam Generator":
         elif not subject.strip():
             st.error("Please enter a subject name.")
         else:
-            with st.spinner("Extracting content and parsing questions locally..."):
+            with st.spinner("Extracting content and formatting questions with Bloom's standards..."):
                 try:
                     extracted_text = parse_uploaded_file(uploaded_doc)
                     qs = generate_offline_questions(extracted_text, sections)
+                    
+                    branding = {
+                        "alignment": header_align,
+                        "logo_bytes": logo_file.getvalue() if logo_file else None
+                    }
+                    
                     paper = {
                         "institution": institution,
                         "department": department,
-                        "exam_type": exam_type,
+                        "exam_type": "Final Examination",
                         "subject": subject,
-                        "code": "OFF-101",
-                        "class_name": "General",
-                        "academic_year": "2026",
-                        "exam_date": "Today",
+                        "code": "OFF-202",
                         "duration": duration,
                         "total_marks": float(total_marks),
                         "instructions": instructions,
-                        "header_text": f"Offline Generated from: {uploaded_doc.name}",
-                        "footer_text": "PITCH | Offline Document Examination",
+                        "footer_text": footer_text,
+                        "branding": branding,
                         "sections": sections,
                         "questions": qs,
                         "include_key": True
@@ -221,6 +200,7 @@ elif page == "Offline Exam Generator":
             edited.append(q)
         paper["questions"] = edited
         
+        st.markdown("### Export Paper")
         col1, col2, col3, col4 = st.columns(4)
         for col, fmt, fn in [(col1,"DOCX",export_docx),(col2,"PDF",export_pdf),(col3,"XLSX",export_xlsx),(col4,"CSV",export_csv)]:
             data = fn(paper)
