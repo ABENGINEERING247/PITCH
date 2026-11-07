@@ -20,17 +20,17 @@ div.stButton>button[kind="primary"] {background:#087f8c;border-color:#087f8c;}
 </style>
 """, unsafe_allow_html=True)
 
-# Popup Modal (Auto-closes after 10 seconds or manually)
+# Large Center Popup Modal (Auto-closes after 10 seconds or manually)
 st.markdown("""
-<div id="pitch-popup" style="position: fixed; top: 20px; right: 20px; z-index: 999999; background: white; border-left: 6px solid #087f8c; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; max-width: 450px; font-family: sans-serif;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-        <h3 style="margin: 0; color: #087f8c; font-size: 1.05rem; font-weight: 700; line-height: 1.3;">PITCH – Professional Intelligent Testing & Content Hub</h3>
-        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #52666a; padding: 0 0 0 10px; line-height: 1;">&times;</button>
+<div id="pitch-popup" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999999; background: white; border-top: 6px solid #087f8c; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-radius: 12px; width: 600px; max-width: 90vw; font-family: sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <h2 style="margin: 0; color: #087f8c; font-size: 1.4rem; font-weight: 800; line-height: 1.3;">PITCH – Professional Intelligent Testing & Content Hub</h2>
+        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: #f1f8f8; border: none; font-size: 1.5rem; cursor: pointer; color: #52666a; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
     </div>
-    <p style="margin: 0 0 10px 0; font-size: 0.82rem; color: #52666a; line-height: 1.4;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
-    <div style="font-size: 0.78rem; color: #333; max-height: 160px; overflow-y: auto; padding-right: 5px;">
-        <strong style="color: #087f8c;">Features:</strong>
-        <ul style="margin: 4px 0 0 15px; padding: 0; line-height: 1.4;">
+    <p style="margin: 0 0 15px 0; font-size: 0.95rem; color: #52666a; line-height: 1.5;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
+    <div style="font-size: 0.88rem; color: #333; max-height: 250px; overflow-y: auto; padding-right: 5px;">
+        <strong style="color: #087f8c; font-size: 1rem;">Features:</strong>
+        <ul style="margin: 6px 0 0 18px; padding: 0; line-height: 1.6;">
             <li>Generate MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.</li>
             <li>Configure section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.</li>
             <li>Customize institution, department, exam header, instructions and footer.</li>
@@ -39,6 +39,9 @@ st.markdown("""
             <li>SQLite question bank, saved papers and student results.</li>
             <li>Export examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.</li>
         </ul>
+    </div>
+    <div style="margin-top: 20px; text-align: right;">
+        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: #087f8c; color: white; border: none; padding: 8px 20px; font-size: 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600;">Got it</button>
     </div>
     <script>
         setTimeout(function() {
