@@ -20,39 +20,38 @@ div.stButton>button[kind="primary"] {background:#087f8c;border-color:#087f8c;}
 </style>
 """, unsafe_allow_html=True)
 
-# Large Popup Modal with working auto-close (10s) and manual close triggers
-st.markdown("""
-<div id="pitch-popup-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999998; display: flex; align-items: center; justify-content: center;">
-    <div style="background: white; border-top: 6px solid #087f8c; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-radius: 12px; width: 90%; max-width: 650px; font-family: sans-serif; position: relative;">
-        <button onclick="document.getElementById('pitch-popup-overlay').style.display='none';" style="position: absolute; top: 15px; right: 15px; background: #f1f8f8; border: none; font-size: 1.5rem; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; color: #52666a; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">&times;</button>
-        <h2 style="margin: 0 0 10px 0; color: #087f8c; font-size: 1.4rem; font-weight: 800;">PITCH – Professional Intelligent Testing & Content Hub</h2>
-        <p style="margin: 0 0 15px 0; font-size: 0.95rem; color: #52666a; line-height: 1.5;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
-        <div style="font-size: 0.88rem; color: #333; max-height: 220px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 12px;">
-            <strong style="color: #087f8c; font-size: 1rem;">Core Features:</strong>
-            <ul style="margin: 8px 0 0 20px; padding: 0; line-height: 1.6;">
-                <li>Generate MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.</li>
-                <li>Configure section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.</li>
-                <li>Customize institution, department, exam header, instructions and footer.</li>
-                <li>AI chatbot for examination and teaching content.</li>
-                <li>Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).</li>
-                <li>SQLite question bank, saved papers and student results.</li>
-                <li>Export examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.</li>
-            </ul>
-        </div>
-        <div style="margin-top: 20px; text-align: right;">
-            <button onclick="document.getElementById('pitch-popup-overlay').style.display='none';" style="background: #087f8c; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer;">Got It</button>
-        </div>
-    </div>
-</div>
-<script>
-    setTimeout(function() {
-        var overlay = document.getElementById('pitch-popup-overlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-        }
-    }, 10000);
-</script>
-""", unsafe_allow_html=True)
+# Native Streamlit Modal Dialog
+@st.dialog("PITCH – Professional Intelligent Testing & Content Hub", width="large")
+def show_welcome_dialog():
+    st.markdown("""
+    <p style="font-size: 1.05rem; color: #52666a; line-height: 1.5; margin-bottom: 15px;">
+    AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.
+    </p>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("### Core Features")
+    st.markdown("""
+    * **Generate Questions:** MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.
+    * **Configuration:** Section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.
+    * **Customization:** Institution, department, exam header, instructions and footer.
+    * **AI Assistant:** Chatbot for examination and teaching content.
+    * **File Support:** Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).
+    * **Database & Storage:** SQLite question bank, saved papers and student results.
+    * **Exports:** Examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.
+    """)
+    
+    col1, col2 = st.columns([5, 1])
+    with col2:
+        if st.button("Got It", type="primary", use_container_width=True):
+            st.session_state.popup_dismissed = True
+            st.rerun()
+
+# Initialize popup state so it shows on first load
+if "popup_dismissed" not in st.session_state:
+    st.session_state.popup_dismissed = False
+
+if not st.session_state.popup_dismissed:
+    show_welcome_dialog()
 
 with st.sidebar:
     st.markdown('<div class="pitch-title">PITCH</div><div class="pitch-sub">Professional Intelligent Testing Hub</div>', unsafe_allow_html=True)
