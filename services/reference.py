@@ -1,23 +1,21 @@
-from io import BytesIO
-from pathlib import Path
+import io
+from pypdf import PdfReader
+from docx import Document
 
-def extract_reference(filename, data):
-    ext=Path(filename).suffix.lower()
-    if ext==".pdf":
-        import fitz
-        doc=fitz.open(stream=data,filetype="pdf")
-        return "\n\n".join(page.get_text() for page in doc)
-    if ext==".docx":
-        from docx import Document
-        doc=Document(BytesIO(data))
-        return "\n".join(p.text for p in doc.paragraphs)
-    if ext==".txt":
-        return data.decode("utf-8",errors="replace")
-    if ext in [".png",".jpg",".jpeg"]:
-        try:
-            import pytesseract
-            from PIL import Image
-            return pytesseract.image_to_string(Image.open(BytesIO(data)))
-        except Exception as e:
-            raise RuntimeError("Image OCR requires Tesseract installed on the host. Try uploading a searchable PDF or text document.") from e
-    raise ValueError("Unsupported file type.")
+def extract_reference(filename, file_bytes):
+    fn = filename.lower()
+    text = ""
+    if fn.endswith(".pdf"):
+        reader = PdfReader(io.BytesIO(file_bytes))
+        for page in reader.pages:
+            t = page.extract_text()
+            if t: text += t + "\n"
+    elif fn.endswith(".docx"):
+        doc = Document(io.BytesIO(file_bytes))
+        for p in doc.paragraphs:
+            if p.text.strip(): text += p.text + "\n"
+    elif fn.endswith((".txt", ".csv")):
+        text = file_bytes.decode("utf-8", errors="ignore")
+    elif fn.endswith((".png", ".jpg", ".jpeg")):
+        text = f"[Image uploaded: {filename}. Visual content can be analyzed in AI assistant.]"
+    return text
