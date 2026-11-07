@@ -20,37 +20,48 @@ div.stButton>button[kind="primary"] {background:#087f8c;border-color:#087f8c;}
 </style>
 """, unsafe_allow_html=True)
 
-# Large Center Popup Modal (Auto-closes after 10 seconds or manually)
-st.markdown("""
-<div id="pitch-popup" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 999999; background: white; border-top: 6px solid #087f8c; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-radius: 12px; width: 600px; max-width: 90vw; font-family: sans-serif;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-        <h2 style="margin: 0; color: #087f8c; font-size: 1.4rem; font-weight: 800; line-height: 1.3;">PITCH – Professional Intelligent Testing & Content Hub</h2>
-        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: #f1f8f8; border: none; font-size: 1.5rem; cursor: pointer; color: #52666a; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1;">&times;</button>
+# Initialize session state for popup visibility
+if "show_popup" not in st.session_state:
+    st.session_state.show_popup = True
+
+# Native Streamlit Popup using st.dialog (Available in modern Streamlit versions)
+# Falls back gracefully or uses container styling if dialog isn't supported, 
+# but st.dialog is fully reliable. Let's use a reliable session-state conditional container:
+
+if st.session_state.show_popup:
+    # We use a container styled as a large centered modal overlay
+    st.markdown("""
+    <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 99998; display: flex; align-items: center; justify-content: center;">
     </div>
-    <p style="margin: 0 0 15px 0; font-size: 0.95rem; color: #52666a; line-height: 1.5;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
-    <div style="font-size: 0.88rem; color: #333; max-height: 250px; overflow-y: auto; padding-right: 5px;">
-        <strong style="color: #087f8c; font-size: 1rem;">Features:</strong>
-        <ul style="margin: 6px 0 0 18px; padding: 0; line-height: 1.6;">
-            <li>Generate MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.</li>
-            <li>Configure section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.</li>
-            <li>Customize institution, department, exam header, instructions and footer.</li>
-            <li>AI chatbot for examination and teaching content.</li>
-            <li>Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).</li>
-            <li>SQLite question bank, saved papers and student results.</li>
-            <li>Export examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.</li>
-        </ul>
-    </div>
-    <div style="margin-top: 20px; text-align: right;">
-        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: #087f8c; color: white; border: none; padding: 8px 20px; font-size: 0.9rem; border-radius: 6px; cursor: pointer; font-weight: 600;">Got it</button>
-    </div>
-    <script>
-        setTimeout(function() {
-            var popup = document.getElementById('pitch-popup');
-            if (popup) { popup.style.display = 'none'; }
-        }, 10000);
-    </script>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+    
+    # Create a prominent modal box using columns and container
+    popup_container = st.container()
+    with popup_container:
+        st.markdown("""
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 99999; background: white; border-top: 6px solid #087f8c; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border-radius: 12px; width: 90%; max-width: 650px; font-family: sans-serif;">
+            <h2 style="margin: 0 0 10px 0; color: #087f8c; font-size: 1.4rem; font-weight: 800;">PITCH – Professional Intelligent Testing & Content Hub</h2>
+            <p style="margin: 0 0 15px 0; font-size: 0.95rem; color: #52666a; line-height: 1.5;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
+            <div style="font-size: 0.88rem; color: #333; max-height: 220px; overflow-y: auto; border-top: 1px solid #eee; padding-top: 12px;">
+                <strong style="color: #087f8c; font-size: 1rem;">Core Features:</strong>
+                <ul style="margin: 8px 0 0 20px; padding: 0; line-height: 1.6;">
+                    <li>Generate MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.</li>
+                    <li>Configure section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.</li>
+                    <li>Customize institution, department, exam header, instructions and footer.</li>
+                    <li>AI chatbot for examination and teaching content.</li>
+                    <li>Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).</li>
+                    <li>SQLite question bank, saved papers and student results.</li>
+                    <li>Export examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.</li>
+                </ul>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns([6, 1, 1])
+        with col3:
+            if st.button("Close ✕", type="primary", use_container_width=True):
+                st.session_state.show_popup = False
+                st.rerun()
 
 with st.sidebar:
     st.markdown('<div class="pitch-title">PITCH</div><div class="pitch-sub">Professional Intelligent Testing Hub</div>', unsafe_allow_html=True)
