@@ -44,10 +44,14 @@ def parse_uploaded_file(uploaded_file):
     return text_content
 
 def generate_offline_questions(text_content, sections):
-    """Parses sentences/rows from uploaded text locally and builds questions without external AI dependencies."""
+    """Parses text locally and builds questions following Bloom's Taxonomy standards for short and long questions."""
     lines = [line.strip() for line in text_content.splitlines() if len(line.strip()) > 15]
     questions = []
     line_idx = 0
+
+    # Bloom Taxonomy Verb Banks
+    short_verbs = ["Define", "Explain", "Classify", "Identify", "Illustrate", "Summarize", "Demonstrate"]
+    long_verbs = ["Analyze", "Evaluate", "Synthesize", "Formulate", "Critique", "Design", "Compare and Contrast"]
 
     for section in sections:
         sec_type = section["type"]
@@ -59,23 +63,30 @@ def generate_offline_questions(text_content, sections):
                 source_line = lines[line_idx % len(lines)]
                 line_idx += 1
             else:
-                source_line = f"Core syllabus concept {i+1} derived from source material."
+                source_line = f"Core concept item {i+1} derived from uploaded reference material."
 
             if sec_type == "MCQ":
-                q_text = f"Based on the provided document, what is indicated regarding: '{source_line[:70]}...'?"
+                q_text = f"Based on the provided document, what is indicated regarding: '{source_line[:60]}...'?"
                 options = [
-                    f"A) Primary finding associated with {source_line[:25]}",
+                    f"A) Primary finding associated with {source_line[:20]}",
                     "B) Secondary or alternative interpretation",
                     "C) None of the mentioned factors",
                     "D) Insufficient data provided in source text"
                 ]
                 answer = "A) Primary finding associated with..."
                 explanation = f"Extracted directly from source reference text: {source_line}"
-            elif sec_type in ["Short", "Descriptive", "Numerical", "Practical"]:
-                q_text = f"Explain or evaluate based on the reference document: {source_line}"
+            elif sec_type == "Short":
+                verb = short_verbs[(i + line_idx) % len(short_verbs)]
+                q_text = f"{verb} the underlying principle concerning: {source_line}"
                 options = []
-                answer = f"Model Answer: Refer to source context involving '{source_line[:40]}'."
-                explanation = "Generated locally from document excerpt."
+                answer = f"Model Answer (Short Response): Expected explanation covering '{source_line[:40]}'."
+                explanation = "Structured according to Bloom's Taxonomy (Understand/Apply level)."
+            elif sec_type in ["Long", "Descriptive"]:
+                verb = long_verbs[(i + line_idx) % len(long_verbs)]
+                q_text = f"{verb} the implications, structural components, or operational framework of: {source_line}"
+                options = []
+                answer = f"Comprehensive Model Answer: Detailed evaluation and breakdown required for '{source_line[:40]}'."
+                explanation = "Structured according to Bloom's Taxonomy (Analyze/Evaluate/Create level)."
             else:
                 q_text = f"True or False: {source_line}"
                 options = ["True", "False"]
