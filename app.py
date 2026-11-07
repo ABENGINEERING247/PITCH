@@ -20,6 +20,35 @@ div.stButton>button[kind="primary"] {background:#087f8c;border-color:#087f8c;}
 </style>
 """, unsafe_allow_html=True)
 
+# Popup Modal (Auto-closes after 10 seconds or manually)
+st.markdown("""
+<div id="pitch-popup" style="position: fixed; top: 20px; right: 20px; z-index: 999999; background: white; border-left: 6px solid #087f8c; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; max-width: 450px; font-family: sans-serif;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+        <h3 style="margin: 0; color: #087f8c; font-size: 1.05rem; font-weight: 700; line-height: 1.3;">PITCH – Professional Intelligent Testing & Content Hub</h3>
+        <button onclick="document.getElementById('pitch-popup').style.display='none'" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #52666a; padding: 0 0 0 10px; line-height: 1;">&times;</button>
+    </div>
+    <p style="margin: 0 0 10px 0; font-size: 0.82rem; color: #52666a; line-height: 1.4;">AI-assisted examination paper generation, question bank, reference material processing, answer keys, scoring and result exports.</p>
+    <div style="font-size: 0.78rem; color: #333; max-height: 160px; overflow-y: auto; padding-right: 5px;">
+        <strong style="color: #087f8c;">Features:</strong>
+        <ul style="margin: 4px 0 0 15px; padding: 0; line-height: 1.4;">
+            <li>Generate MCQs, short/long, fill-in-the-blank, true/false, descriptive, numerical and practical questions.</li>
+            <li>Configure section counts, marks per question, attempt counts, difficulty, Bloom taxonomy, language and MCQ option count.</li>
+            <li>Customize institution, department, exam header, instructions and footer.</li>
+            <li>AI chatbot for examination and teaching content.</li>
+            <li>Upload PDF, DOCX, TXT and images (image OCR requires Tesseract).</li>
+            <li>SQLite question bank, saved papers and student results.</li>
+            <li>Export examination papers and answer keys to DOCX/PDF/XLSX/CSV; results to DOCX/PDF/XLSX.</li>
+        </ul>
+    </div>
+    <script>
+        setTimeout(function() {
+            var popup = document.getElementById('pitch-popup');
+            if (popup) { popup.style.display = 'none'; }
+        }, 10000);
+    </script>
+</div>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
     st.markdown('<div class="pitch-title">PITCH</div><div class="pitch-sub">Professional Intelligent Testing Hub</div>', unsafe_allow_html=True)
     st.divider()
