@@ -1,54 +1,124 @@
-import sqlite3, json
-from pathlib import Path
+import sqlite3
+import json
 from datetime import datetime
 
-DB_PATH = Path(__file__).resolve().parent.parent / "pitch.db"
+DB_NAME = "pitch_database.db"
 
-def conn():
-    c=sqlite3.connect(DB_PATH); c.row_factory=sqlite3.Row; return c
+def get_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    with conn() as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS papers(
-        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, subject TEXT, payload TEXT, created_at TEXT)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS questions(
-        id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT, type TEXT, question TEXT, payload TEXT, marks REAL)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS results(
-        id INTEGER PRIMARY KEY AUTOINCREMENT, roll_no TEXT, student TEXT, subject TEXT,
-        obtained REAL, total REAL, percentage REAL, grade TEXT, status TEXT, created_at TEXT)""")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS papers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            subject TEXT,
+            created_at TEXT,
+            data TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject TEXT,
+            type TEXT,
+            question TEXT,
+            options TEXT,
+            answer TEXT,
+            marks REAL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            roll TEXT,
+            student TEXT,
+            subject TEXT,
+            obtained REAL,
+            total REAL,
+            percentage REAL,
+            grade TEXT,
+            created_at TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
 
-def save_paper(paper, paper_id=None):
-    title=f"{paper.get('exam_type','Exam')} - {paper.get('subject','')}"
-    payload=json.dumps(paper,ensure_ascii=False)
-    with conn() as c:
-        if paper_id:
-            c.execute("UPDATE papers SET title=?,subject=?,payload=? WHERE id=?",(title,paper.get("subject",""),payload,paper_id))
-            return paper_id
-        cur=c.execute("INSERT INTO papers(title,subject,payload,created_at) VALUES(?,?,?,?)",(title,paper.get("subject",""),payload,datetime.now().isoformat(timespec="seconds")))
-        return cur.lastrowid
+def save_paper(paper_dict, paper_id=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    title = f"{paper_dict.get('subject', 'Subject')} - {paper_dict.get('exam_type', 'Exam')}"
+    subject = paper_dict.get('subject', '')
+    data_json = json.dumps(paper_dict)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if paper_id:
+        cursor.execute("UPDATE papers SET title=?, subject=?, data=? WHERE id=?", (title, subject, data_json, paper_id))
+        conn.commit()
+        conn.close()
+        return paper_id
+    else:
+        cursor.execute("INSERT INTO papers (title, subject, created_at, data) VALUES (?, ?, ?, ?)", (title, subject, timestamp, data_json))
+        conn.commit()
+        pid = cursor.lastrowid
+        conn.close()
+        return pid
 
 def list_papers():
-    with conn() as c: rows=c.execute("SELECT * FROM papers ORDER BY id DESC").fetchall()
-    return [dict(r) for r in rows]
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, subject, created_at FROM papers ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
-def get_paper(pid):
-    with conn() as c: row=c.execute("SELECT payload FROM papers WHERE id=?",(pid,)).fetchone()
-    return json.loads(row["payload"]) if row else None
+def get_paper(paper_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT data FROM papers WHERE id=?", (paper_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row["data"])
+    return None
 
-def save_question(q, subject):
-    with conn() as c:
-        c.execute("INSERT INTO questions(subject,type,question,payload,marks) VALUES(?,?,?,?,?)",
-        (subject,q.get("type",""),q.get("question",""),json.dumps(q,ensure_ascii=False),q.get("marks",0)))
+def save_question(q_dict, subject):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO questions (subject, type, question, options, answer, marks) VALUES (?, ?, ?, ?, ?, ?)",
+        (subject, q_dict.get("type"), q_dict.get("question"), json.dumps(q_dict.get("options", [])), q_dict.get("answer"), q_dict.get("marks", 1.0))
+    )
+    conn.commit()
+    conn.close()
 
 def list_questions():
-    with conn() as c: rows=c.execute("SELECT * FROM questions ORDER BY id DESC").fetchall()
-    return [dict(r) for r in rows]
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, subject, type, question, marks FROM questions ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
-def save_result(r):
-    with conn() as c:
-        c.execute("""INSERT INTO results(roll_no,student,subject,obtained,total,percentage,grade,status,created_at)
-        VALUES(?,?,?,?,?,?,?,?,?)""",(r["roll_no"],r["student"],r["subject"],r["obtained"],r["total"],r["percentage"],r["grade"],r["status"],datetime.now().isoformat(timespec="seconds")))
+def save_result(res_dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute(
+        "INSERT INTO results (roll, student, subject, obtained, total, percentage, grade, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (res_dict["roll"], res_dict["student"], res_dict["subject"], res_dict["obtained"], res_dict["total"], res_dict["percentage"], res_dict["grade"], timestamp)
+    )
+    conn.commit()
+    conn.close()
 
 def list_results():
-    with conn() as c: rows=c.execute("SELECT roll_no,student,subject,obtained,total,percentage,grade,status FROM results ORDER BY id DESC").fetchall()
-    return [dict(r) for r in rows]
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT roll, student, subject, obtained, total, percentage, grade, created_at FROM results ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
