@@ -1,0 +1,2 @@
+# Optional system package for OCR on Linux deployments
+tesseract-ocr
