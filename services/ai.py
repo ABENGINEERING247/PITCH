@@ -1,56 +1,97 @@
-import os, json, re
+import os
+import json
 import streamlit as st
 
-def _client():
+def get_openai_client():
+    api_key = ""
     try:
-        from openai import OpenAI
-    except ImportError as e:
-        raise RuntimeError("Install dependencies with: pip install -r requirements.txt") from e
-    key = ""
-    model = "gpt-6-luna"
-    try:
-        key = st.secrets.get("OPENAI_API_KEY", "")
-        model = st.secrets.get("OPENAI_MODEL", model)
+        if hasattr(st, "secrets") and "OPENAI_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENAI_API_KEY"]
     except Exception:
         pass
-    key = key or os.getenv("OPENAI_API_KEY", "")
-    model = os.getenv("OPENAI_MODEL", model)
-    if not key:
-        raise RuntimeError("OPENAI_API_KEY is not configured. Add it to Streamlit Secrets or environment variables.")
-    return OpenAI(api_key=key), model
+    if not api_key:
+        api_key = os.getenv("OPENAI_API_KEY", "")
+    
+    from openai import OpenAI
+    return OpenAI(api_key=api_key) if api_key else None
 
-def _completion(system, user, temperature=0.4):
-    client, model = _client()
+def generate_questions(subject, topic, sections, difficulty, bloom, language, mcq_options, reference_text):
+    client = get_openai_client()
+    
+    # Fallback simulation if no API key is present so the app never crashes
+    if not client:
+        qs = []
+        for sec in sections:
+            for i in range(sec["count"]):
+                t = sec["type"]
+                q_dict = {
+                    "type": t,
+                    "question": f"[{subject}] Sample {t} question #{i+1} covering topic: {topic or 'General Curriculum'}.",
+                    "marks": sec["marks"],
+                    "answer": "Model answer and grading criteria.",
+                    "explanation": f"Evaluates {difficulty} level understanding."
+                }
+                if t == "MCQ":
+                    q_dict["options"] = [f"Option {chr(65+j)}" for j in range(mcq_options)]
+                    q_dict["answer"] = "Option A"
+                elif t == "True/False":
+                    q_dict["options"] = ["True", "False"]
+                    q_dict["answer"] = "True"
+                qs.append(q_dict)
+        return qs
+
+    model = "gpt-4o"
+    try:
+        if hasattr(st, "secrets") and "OPENAI_MODEL" in st.secrets:
+            model = st.secrets["OPENAI_MODEL"]
+    except Exception:
+        pass
+
+    prompt = f"""
+    Generate an examination paper for Subject: {subject}.
+    Topic/Syllabus: {topic}
+    Difficulty: {difficulty}
+    Bloom's Taxonomy: {', '.join(bloom)}
+    Language: {language}
+    Reference Material: {reference_text}
+    
+    Sections configuration: {json.dumps(sections)}
+    MCQ options count: {mcq_options}
+    
+    Return ONLY a valid JSON array of question objects. Each object must have keys:
+    "type", "question", "options" (list of strings if MCQ/True-False else empty list), "answer", "marks", "explanation".
+    """
+    
     response = client.chat.completions.create(
-        model=model, temperature=temperature,
-        messages=[{"role":"system","content":system},{"role":"user","content":user}]
+        model=model,
+        messages=[
+            {"role": "system", "content": "You are an expert academic assessment generator. Output strictly valid JSON."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7
     )
-    return response.choices[0].message.content or ""
-
-def generate_questions(subject, topic, sections, difficulty, bloom, language, mcq_options, reference_text=""):
-    schema = """Return ONLY a valid JSON array. Each item must have:
-{"type":"MCQ|Short|Long|Fill in the Blanks|True/False|Descriptive|Numerical|Practical",
-"question":"question text","options":["..."],"answer":"teacher answer","explanation":"marking guidance","marks":2}
-For non-MCQ options use []. Do not wrap JSON in markdown."""
-    system = "You are PITCH, an expert assessment designer. Produce accurate, unambiguous, syllabus-aligned assessment questions. Do not fabricate facts from supplied references. When source text is provided, prioritize it."
-    user = f"""Create examination questions for subject: {subject}
-Topics/syllabus: {topic}
-Sections: {json.dumps(sections)}
-Difficulty: {difficulty}
-Bloom levels: {", ".join(bloom)}
-Language: {language}
-MCQ options per question: {mcq_options}
-Reference material (may be incomplete): {reference_text[:18000]}
-Generate exactly the requested count for each section, label each question's type and marks. MCQs must have exactly {mcq_options} options and one correct answer. True/False answers must be True or False. Fill blanks should include an answer. Avoid duplicates.
-{schema}"""
-    raw = _completion(system, user, 0.3)
-    raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.I|re.M).strip()
-    data = json.loads(raw)
-    if not isinstance(data, list): raise ValueError("AI did not return a JSON question list.")
-    return data
+    content = response.choices[0].message.content.strip()
+    if content.startswith("```json"):
+        content = content[7:-3].strip()
+    elif content.startswith("```"):
+        content = content[3:-3].strip()
+        
+    return json.loads(content)
 
 def chat_response(prompt):
-    return _completion(
-        "You are PITCH AI Assistant, a helpful assessment and teaching-content expert. Help educators design questions, answer keys, rubrics, study notes, lesson summaries and fair assessment criteria. Be clear, structured, and identify uncertainty. Do not claim to have read files unless their text is supplied.",
-        prompt, 0.5
+    client = get_openai_client()
+    if not client:
+        return "AI Assistant is running in offline mode. Configure OPENAI_API_KEY in secrets to enable live responses."
+    
+    model = "gpt-4o"
+    try:
+        if hasattr(st, "secrets") and "OPENAI_MODEL" in st.secrets:
+            model = st.secrets["OPENAI_MODEL"]
+    except Exception:
+        pass
+        
+    res = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
     )
+    return res.choices[0].message.content
